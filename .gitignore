@@ -1,0 +1,5 @@
+var/
+__pycache__/
+*.pyc
+.omc/
+.omx/
