@@ -461,3 +461,16 @@ class TestPrivacy(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestPerMethodParams(unittest.TestCase):
+    def test_cross_method_field_rejected(self):
+        import server as _srv
+        for method, foreign in [
+            ("checkyourself.score", {"project": "x"}),
+            ("checkyourself.backlog", {"coverage": 1}),
+            ("checkyourself.schema", {"findings": []}),
+            ("checkyourself.validate", {"name": "x"}),
+        ]:
+            _, err = _srv._validate_params(method, dict(foreign))
+            self.assertIsNotNone(err, f"{method} accepted foreign field {list(foreign)[0]}")

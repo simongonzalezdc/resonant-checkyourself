@@ -64,8 +64,18 @@ def _validate_params(method, params):
     """
     if not isinstance(params, dict):
         return None, "params must be an object"
+    per_method = {
+        "checkyourself.scan": {"project", "deep", "max_files"},
+        "checkyourself.score": {"findings", "coverage"},
+        "checkyourself.backlog": {"findings"},
+        "checkyourself.schema": {"name"},
+        "checkyourself.validate": {"kind", "artifact"},
+    }
+    allowed = per_method.get(method)
+    if allowed is None:
+        return None, f"unknown method: {method}"
     for key in params:
-        if key not in ("project", "deep", "max_files", "findings", "coverage", "kind", "artifact", "name"):
+        if key not in allowed:
             return None, f"unknown field: {key}"
 
     if method == "checkyourself.scan":
