@@ -1,0 +1,30 @@
+{
+  "files": {
+    ".github/actions/checkyourself/action.yml": "2542c2fc926c49f1cb5b9dc0ecc264b3174db4a733e0ac9082e238697ba0b809",
+    "LICENSE": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+    "NOTICE.md": "b513c39614b6c132cbf4b2f8794cc16e4163f425e23394cd59ed5953ca1c1671",
+    "checkyourself.manifest.json": "9f92140f917778804354b184d7232278591ec84aa2fa2dc708bc2cb79192d6ad",
+    "schemas/backlog.schema.json": "8af88c156d4141c74074a1605ff3ab07966dccf9ed12aaeb5bd3eef7908aacc2",
+    "schemas/capabilities.schema.json": "ce67d941c2efee3d7edd30106e904797ed8fbee75bf0994f7a2d15e489a30fc3",
+    "schemas/checkyourself-report.schema.json": "36c96acff61a391f90f5fde9350ca0c576b3a54ced38b31f0d286166426069e6",
+    "schemas/coverage.schema.json": "c4e4729eb7a0af1b212424db9bb7ac38506afbbdf5c93b823be5ccec284b715e",
+    "schemas/dashboard-data.schema.json": "51aaf72b90193454f07af6ff5ab795de554549d0803dd951618fc7b64ecb61b8",
+    "schemas/diff.schema.json": "5f9732c1148d19b30396bcc3802247099f74f50ff16eba76a88516166dee1920",
+    "schemas/learning-plan.schema.json": "2412f58beb82872ab8fb0e68285a8f960cb1a773de4e54d6b33739b0200f4562",
+    "schemas/next-batch.schema.json": "b56956d613f4612df44ee82416c39080a69ecfbe7384f17d9be5d6bafb907bf0",
+    "schemas/scan.schema.json": "db7b62969ab0a9e9ec1ce00ed2f49219bbc27083e2d3be3c9e08a720ffa7510d",
+    "schemas/score-result.schema.json": "1b5e1993ea1ca61cebdaeb7071081d6a2d0699109eba45d208c8bddc3e6d4f2f",
+    "tests/test_checkyourself_cli.py": "f429bf45a31b07599b08e1e32c01a85a3f193844086c772fe2a2781483b98eca",
+    "tools/checkyourself.py": "2b6659f52a28695aa780a2def5608c5d7a874a5386b65d4dcaa420407c294712"
+  },
+  "upstream": {
+    "commit": "03a74446b4f14ff80b95a74cd3937d749ceb286b",
+    "license": "Apache-2.0",
+    "method": "git archive 03a7444 -- .github LICENSE NOTICE.md checkyourself.manifest.json schemas tests tools (committed tree; working-tree-local edits NOT vendored)",
+    "name": "checkyourself",
+    "urls": [
+      "https://git.kyanitelabs.tech/KyaniteLabs/checkyourself"
+    ],
+    "vendor": "KyaniteLabs"
+  }
+}
