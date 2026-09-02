@@ -376,6 +376,7 @@ class TestAdversarial(unittest.TestCase):
             except OSError:
                 pass
             self.assertTrue(data.startswith(b"HTTP/1.1 413"), data[:60])
+            self.assertIn(b"Connection: close", data)  # advertised, not silent (gifts#4)
             s.close()
             code, body = post({"method": "checkyourself.status"})  # service unaffected
             self.assertEqual(code, 200)
@@ -390,6 +391,7 @@ class TestAdversarial(unittest.TestCase):
                           b"Content-Length: 1000\r\n\r\nshort")
                 data = s.recv(65536)
                 self.assertTrue(data.startswith(b"HTTP/1.1 408"), data[:60])
+                self.assertIn(b"Connection: close", data)  # advertised, not silent (gifts#4)
                 s.close()
                 code, body = post({"method": "checkyourself.status"})  # no thread pinned, service alive
                 self.assertEqual(code, 200)
