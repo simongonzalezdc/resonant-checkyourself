@@ -1,0 +1,280 @@
+{
+  "id": "addon.checkyourself",
+  "name": "CheckYourself",
+  "version": "0.1.0",
+  "author": "KyaniteLabs",
+  "category": "tool",
+  "sdkVersion": "0.1.0",
+  "description": "The CheckYourself production-readiness check, packaged as a ResonantOS add-on: a deterministic local scan of a project directory that detects the stack, flags concrete risks (committed .env files, secret-shaped strings, missing tests or CI, TLS and CORS misconfigurations) ranked P0-P3, then scores findings 0-100, ranks the remediation backlog, and validates report artifacts against bundled schemas. Read-only: it inspects, it never modifies the scanned project. Vendored byte-identical from the upstream Apache-2.0 repo and wrapped by a thin local service with no dependencies.",
+  "runtimeType": "local-service",
+  "surfaces": [],
+  "requestedCapabilities": [
+    {
+      "capability": "filesystem",
+      "granted": false,
+      "scope": "workspace",
+      "revocationBehavior": "hard-stop"
+    }
+  ],
+  "provenance": {
+    "tier": "sideloaded-unverified",
+    "verificationState": "unverified",
+    "signed": false
+  },
+  "runtimeIsolation": {
+    "boundary": "host-mediated-service",
+    "supportsDegradedMode": true,
+    "requiresReviewedGrant": true
+  },
+  "grantPresets": [
+    {
+      "id": "checkyourself-local-scan",
+      "label": "Local project scans",
+      "description": "Allow CheckYourself to read files under the configured scan root (CHECKYOURSELF_SCAN_ROOT, default the service working directory) to run its deterministic production-readiness scan. Read-only; scans never modify the project.",
+      "grants": [
+        {
+          "capability": "filesystem",
+          "granted": true,
+          "scope": "workspace",
+          "revocationBehavior": "hard-stop"
+        }
+      ]
+    }
+  ],
+  "providerRequirements": {
+    "sharedProfiles": [],
+    "supportsPrivateCredentials": true
+  },
+  "systemSlots": [],
+  "archiveIntegration": {
+    "readScopes": [],
+    "intakeWriteScopes": [],
+    "canRequestIngest": false,
+    "canWriteKnowledgePages": false
+  },
+  "health": {
+    "strategy": "http-json-status"
+  },
+  "service": {
+    "protocol": "http-json",
+    "entrypoint": "http://127.0.0.1:4892",
+    "healthCommand": "checkyourself.status"
+  },
+  "tools": [
+    {
+      "name": "checkyourself.status",
+      "description": "Report service version, busy state, the most recent scan id, and the active scan root boundary.",
+      "requiredCapabilities": ["filesystem"],
+      "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "ok": { "type": "boolean" },
+          "tool": { "type": "string" },
+          "version": { "type": "string" },
+          "busy": { "type": "boolean" },
+          "last_scan_id": { "type": ["string", "null"] },
+          "scan_root": { "type": "string", "description": "Absolute scan boundary (home paths redacted to ~); scans are refused outside it" }
+        }
+      },
+      "audit": { "logRequest": true, "logResult": true, "artifactTypes": ["log"] },
+      "requiresHumanApproval": false
+    },
+    {
+      "name": "checkyourself.scan",
+      "description": "The CheckYourself check itself (upstream verbs scan/diagnostic): read-only deterministic production-readiness scan of one project directory under the scan root. Detects stack signals, dependency hints, env files, tests, and CI; flags concrete risks as findings ranked P0-P3 (secret-shaped strings are redacted before they reach the output); returns counts, risk-surface hints, and the upstream public-repo claim guardrails. The project path must sit under CHECKYOURSELF_SCAN_ROOT. One scan at a time; results are also persisted home-path-redacted under var/. This is a scaffold, not the full AI diagnostic.",
+      "requiredCapabilities": ["filesystem"],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project": { "type": "string", "description": "Project root path to inspect, confined to CHECKYOURSELF_SCAN_ROOT (default: the service process working directory)", "maxLength": 2048 },
+          "deep": { "type": "boolean", "description": "Run slower validation checks for detected surfaces, such as mutable GitHub Action references. Defaults to false." },
+          "max_files": { "type": "integer", "minimum": 1, "maximum": 6000, "description": "Maximum files to scan before truncating (default 6000). Truncation is reported in scan_limits." }
+        },
+        "required": ["project"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "tool": { "type": "string" },
+          "schema": { "type": "string", "const": "checkyourself-scan/1" },
+          "generated_at": { "type": "string" },
+          "project": { "type": "string", "description": "Resolved project root, home paths redacted to ~" },
+          "deep": { "type": "boolean" },
+          "files_scanned": { "type": "integer" },
+          "scan_limits": { "type": "object", "description": "truncated, max_files, files_beyond_limit, symlinks_skipped, files_unreadable" },
+          "stack_signals": { "type": "array", "items": { "type": "string" } },
+          "dependencies": { "type": "object", "description": "label -> sorted dependency names" },
+          "scripts": { "type": "object" },
+          "env_files": { "type": "array", "items": { "type": "string" } },
+          "tests": { "type": "array", "items": { "type": "string" } },
+          "ci": { "type": "array", "items": { "type": "string" } },
+          "risk_surfaces": { "type": "object", "description": "risk label -> relative paths" },
+          "findings": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": { "type": "string" },
+                "severity": { "type": "string", "enum": ["P0", "P1", "P2", "P3"] },
+                "category": { "type": "string", "description": "Score category C1..C10" },
+                "title": { "type": "string" },
+                "finding": { "type": "string" },
+                "plain_english_risk": { "type": "string" },
+                "evidence": { "type": "array", "items": { "type": "string" }, "description": "file:line context; secret-shaped values already redacted upstream" },
+                "recommended_fix": { "type": "string" },
+                "status": { "type": "string" }
+              }
+            }
+          },
+          "counts": { "type": "object", "properties": { "P0": { "type": "integer" }, "P1": { "type": "integer" }, "P2": { "type": "integer" }, "P3": { "type": "integer" } } },
+          "suppression_count": { "type": "integer" },
+          "tree": { "type": "array", "items": { "type": "string" } },
+          "public_repo_scope_guardrails": { "type": "array", "items": { "type": "string" } },
+          "scan_id": { "type": "string", "description": "Wrapper-assigned id; the same redacted result is persisted at record_path" },
+          "record_path": { "type": "string", "description": "Addon-relative path of the persisted redacted scan.json under var/" }
+        },
+        "required": ["schema", "findings", "counts"]
+      },
+      "audit": { "logRequest": true, "logResult": true, "artifactTypes": ["diagnostic-report", "log"] },
+      "requiresHumanApproval": false
+    },
+    {
+      "name": "checkyourself.score",
+      "description": "Compute the deterministic Production Reality Score (0-100, with severity caps and explicit confidence) from inline findings and an optional coverage object. Coverage-backed scores are the only ones that can reach high confidence; scan-derived and finding-only estimates are always labeled low confidence.",
+      "requiredCapabilities": ["filesystem"],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "findings": {
+            "type": ["object", "array"],
+            "description": "A checkyourself-scan/1 object, a CheckYourself report object, an object with findings/remediation_backlog, or a plain list of finding objects"
+          },
+          "coverage": { "type": "object", "description": "Optional filled coverage object; supply it for coverage-backed scoring" }
+        },
+        "required": ["findings"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "tool": { "type": "string" },
+          "schema": { "type": "string", "const": "checkyourself-score/1" },
+          "generated_at": { "type": "string" },
+          "score": { "type": "integer", "minimum": 0, "maximum": 100 },
+          "raw_score": { "type": "integer" },
+          "score_mode": { "type": "string", "enum": ["coverage-backed", "scan-derived-estimate", "finding-only-estimate"] },
+          "confidence": { "type": "string", "enum": ["high", "medium", "low"] },
+          "counts": { "type": "object" },
+          "caps_applied": { "type": "array", "items": { "type": "object" } },
+          "per_category": { "type": "array", "items": { "type": "object" } },
+          "findings_scored": { "type": "array", "items": { "type": "string" } },
+          "coverage_complete": { "type": "boolean" },
+          "manual_evidence_needed": { "type": "array", "items": { "type": "string" } }
+        },
+        "required": ["schema", "score", "confidence"]
+      },
+      "audit": { "logRequest": true, "logResult": true, "artifactTypes": ["log"] },
+      "requiresHumanApproval": false
+    },
+    {
+      "name": "checkyourself.backlog",
+      "description": "Normalize inline findings and return the complete remediation backlog sorted by severity, category, and finding id — each item with fix summary, order rationale, verification, rollback idea, learning value, and status — plus the safest first approval batch. Recommends work only; it never modifies files.",
+      "requiredCapabilities": ["filesystem"],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "findings": {
+            "type": ["object", "array"],
+            "description": "A scan result, report, object with findings/remediation_backlog, or a plain list of finding objects"
+          }
+        },
+        "required": ["findings"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "tool": { "type": "string" },
+          "schema": { "type": "string", "const": "checkyourself-backlog/1" },
+          "generated_at": { "type": "string" },
+          "remediation_backlog": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "finding_id": { "type": "string" },
+                "severity": { "type": "string", "enum": ["P0", "P1", "P2", "P3"] },
+                "category": { "type": "string" },
+                "fix_summary": { "type": "string" },
+                "why_this_order": { "type": "string" },
+                "verification": { "type": "string" },
+                "rollback": { "type": "string" },
+                "learning_value": { "type": "string" },
+                "status": { "type": "string" }
+              }
+            }
+          },
+          "first_approval_batch": { "type": "array", "items": { "type": "string" } }
+        },
+        "required": ["schema", "remediation_backlog", "first_approval_batch"]
+      },
+      "audit": { "logRequest": true, "logResult": true, "artifactTypes": ["log"] },
+      "requiresHumanApproval": false
+    },
+    {
+      "name": "checkyourself.validate",
+      "description": "Validate an inline JSON artifact against one of the bundled CheckYourself schema subsets (scan, coverage, score, backlog, next, diff, report, dashboard, dashboard-data, learning-plan, capabilities) and return the validation errors, if any.",
+      "requiredCapabilities": ["filesystem"],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "kind": { "type": "string", "enum": ["backlog", "capabilities", "coverage", "dashboard", "dashboard-data", "diff", "learning-plan", "next", "report", "scan", "score"] },
+          "artifact": { "type": "object", "description": "Inline JSON object to validate" }
+        },
+        "required": ["kind", "artifact"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "tool": { "type": "string" },
+          "schema": { "type": "string", "const": "checkyourself-validation/1" },
+          "kind": { "type": "string" },
+          "valid": { "type": "boolean" },
+          "errors": { "type": "array", "items": { "type": "string" } }
+        },
+        "required": ["schema", "kind", "valid", "errors"]
+      },
+      "audit": { "logRequest": true, "logResult": true, "artifactTypes": ["log"] },
+      "requiresHumanApproval": false
+    },
+    {
+      "name": "checkyourself.schema",
+      "description": "Return one of the bundled CheckYourself JSON schemas by name, so an agent can inspect expected fields before producing or validating artifacts.",
+      "requiredCapabilities": ["filesystem"],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "enum": ["backlog", "capabilities", "coverage", "dashboard", "dashboard-data", "diff", "learning-plan", "next", "report", "scan", "score"] }
+        },
+        "required": ["name"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "description": "The requested bundled JSON schema (checkyourself-*.schema.json contents)"
+      },
+      "audit": { "logRequest": true, "logResult": true, "artifactTypes": ["log"] },
+      "requiresHumanApproval": false
+    }
+  ],
+  "installHooks": {
+    "onInstall": "start-checkyourself-service"
+  },
+  "compatibility": {
+    "shellVersion": "^0.1.0",
+    "platforms": ["macOS", "linux", "windows"]
+  }
+}
